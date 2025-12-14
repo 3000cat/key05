@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>符號鍵盤小遊戲</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* 使用 Inter 字體 (或系統預設的清晰字體) */
+        /* 引入 Inter (UI用) 和 Roboto Mono (符號用，更清晰) */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Roboto+Mono:wght@700&display=swap');
+        
+        :root {
+            --color-primary: #1e3a8a; /* 藍色 (題目符號色) */
+            --color-secondary: #fcd34d; /* 黃色 (得分) */
+            --color-timer-blue: #3b82f6; /* 鮮藍色 (計時器/高亮色) */
+            --color-background-dark: #1f2937; /* 深灰藍背景 */
+            --color-display-light: #d1fae5; /* 淺綠色 (題目欄背景) */
+            --color-key-light: #ffffff; /* 白鍵 */
+            --color-key-dark: #4b5563; /* 功能鍵灰 */
+            --color-success: #10b981; /* 綠色 (答對回饋) */
+            --color-error: #ef4444; /* 紅色 (答錯回饋 / 警示) */
+            --color-title-purple: #c084fc; /* 淡紫色 (標題) */
+            --color-symbol-deep-blue: #0f3460; /* 更深的藍色，用於題目顯示 */
+        }
+
+        body {
+            font-family: 'Inter', 'Noto Sans TC', sans-serif;
+            background-color: var(--color-background-dark);
+            color: #fff;
+            /* 核心置中設定：確保 body 佔滿整個視口，並將子元素置中 */
+            display: flex;
+            justify-content: center; /* 水平置中 */
+            align-items: center; /* 垂直置中 */
+            min-height: 100vh; 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box;
+        }
+
+        .game-container {
+            width: 95%; /* 接近滿版 */
+            max-width: 1400px; /* 增加最大寬度 */
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            margin: 0 auto; /* 確保水平置中 */
+        }
+
+        .main-title {
+            font-size: 2.5rem; 
+            color: var(--color-title-purple); /* 標題改為淡紫色 */
+            font-weight: 900; 
+            margin-bottom: 20px; 
+            text-align: center;
+        }
+
+        /* ------------------------
+           1. Start Screen Styles (Centered)
+           ------------------------ */
+        #startScreen {
+            display: flex; /* JS控制顯示/隱藏 */
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: #2a3042;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+            max-width: 600px;
+            margin: 0 auto; /* 確保開始畫面容器本身置中 */
+        }
+        
+        .rule-list {
+            text-align: left;
+            margin: 20px 0 30px 0;
+            padding: 0 20px;
+            list-style: none;
+            font-size: 1.1rem;
+        }
+        .rule-list li {
+            background-color: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            border-left: 5px solid var(--color-secondary);
+        }
+        
+        /* ------------------------
+           2. Game Layout Styles (Centered)
+           ------------------------ */
+        #gameScreen {
+            /* 確保遊戲主畫面容器將其子元素 (game-column) 置中 */
+            display: none; /* 初始隱藏 */
+            width: 100%;
+            justify-content: center; /* 水平置中 game-column */
+        }
+        
+        .game-column {
+            display: flex;
+            flex-direction: column;
+            align-items: center; /* 垂直排列的子元素 (題目區, 鍵盤) 居中 */
+            gap: 20px; 
+            width: 100%; /* 佔滿父容器寬度，但內部元素有 max-width 限制 */
+            max-width: 900px; /* 限制整個遊戲區的邏輯寬度，使其在寬螢幕上不至於過度分散 */
+        }
+
+        /* 頂部佈局：題目顯示區 + 狀態欄 */
+        .top-row-layout {
+            display: flex;
+            gap: 20px;
+            width: 100%;
+            max-width: 900px; /* 限制內部元素最大寬度 */
+            align-items: stretch; 
+        }
+        
+        .display-area {
+            flex-grow: 1; 
+            background-color: var(--color-display-light); /* 淡綠色 */
+            border-radius: 12px;
+            padding: 20px; 
+            min-height: 150px; /* 保持原來的最小高度 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.1);
+            width: 70%; 
+            overflow: hidden; 
+        }
+
+        #symbol-display {
+            /* 題目符號字體大小：桌面版 8rem */
+            font-size: 8rem; 
+            font-weight: 900;
+            color: var(--color-symbol-deep-blue); /* 使用更深的藍色 */
+            user-select: none;
+            transition: transform 0.1s ease;
+            /* 增加文字陰影以提高清晰度 */
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1); 
+            /* *** 使用更清晰、等寬、標點符號辨識度高的字體 *** */
+            font-family: 'Roboto Mono', monospace; 
+        }
+
+        /* ------------------------
+           *** 針對微小符號的放大樣式 (增強版) ***
+           ------------------------ */
+        #symbol-display.symbol-enlarge {
+            font-size: 10rem; /* 放大字體 */
+            font-weight: 900;
+            line-height: 0.8; /* 確保垂直居中不跑掉 */
+            /* 強化標點符號的視覺效果 */
+            text-shadow: 0 0 5px rgba(0, 0, 0, 0.3), 0 0 10px rgba(0, 0, 0, 0.1);
+            transform: scale(1.1); /* 略微放大整個元素 */
+        }
+        
+        /* 警告訊息樣式 */
+        .warning-message {
+            color: var(--color-secondary); 
+            font-size: 1.2rem;
+            font-weight: bold;
+            height: 30px; 
+            line-height: 30px;
+            margin-top: -20px;
+            margin-bottom: 20px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .warning-message.visible {
+            opacity: 1;
+        }
+
+        /* ------------------------
+           3. Enhanced Status Panel 
+           ------------------------ */
+        .status-panel {
+            flex-shrink: 0; 
+            width: 30%; 
+            min-width: 150px; 
+            padding: 0;
+            display: flex; 
+            flex-direction: column;
+            gap: 15px; 
+            text-align: center;
+            justify-content: space-between; 
+        }
+
+        .status-card {
+            padding: 10px; 
+            border-radius: 10px; 
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: transform 0.2s;
+            flex-grow: 1; 
+            justify-content: center;
+        }
+        
+        .status-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .status-icon {
+            font-size: 1.5rem; 
+            margin-bottom: 5px;
+        }
+
+        .status-card .label {
+            font-size: 0.9rem; 
+            font-weight: 400;
+            color: #cbd5e1; 
+            margin-bottom: 0px;
+            letter-spacing: 1px;
+        }
+
+        /* 計時器樣式 (鮮藍色) */
+        #timer-card {
+            background: linear-gradient(145deg, #374151, #1f2937);
+            border: 2px solid var(--color-timer-blue); 
+        }
+        #timer-icon {
+            color: var(--color-timer-blue); 
+        }
+
+        #timer {
+            color: var(--color-timer-blue); 
+            font-size: 2rem; 
+            font-weight: 900;
+            line-height: 1;
+        }
+
+        /* 得分卡片樣式 (鮮黃色) */
+        #score-card {
+            background: linear-gradient(145deg, #1f2937, #374151);
+            border: 2px solid var(--color-secondary); 
+        }
+        #score-icon {
+            color: var(--color-secondary);
+        }
+
+        #score {
+            color: var(--color-secondary);
+            font-size: 2rem; 
+            font-weight: 900;
+            line-height: 1;
+        }
+
+
+        /* ------------------------
+           4. Keyboard and Buttons - KEY REDUCTION
+           ------------------------ */
+
+        .keyboard {
+            display: flex;
+            flex-direction: column;
+            gap: 5px; /* 縮小間距 */
+            padding: 10px;
+            background-color: rgba(0, 0, 0, 0.2);
+            border-radius: 15px;
+            width: 100%;
+            max-width: 650px; 
+        }
+
+        .keyboard-row {
+            display: flex;
+            gap: 5px; /* 縮小間距 */
+            justify-content: center;
+        }
+
+        .key {
+            background-color: var(--color-key-light);
+            color: #000;
+            border-radius: 8px;
+            height: 40px; /* 縮小按鍵高度 (從 50px 變為 40px) */
+            min-width: 40px; /* 縮小最小寬度 */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-size: 0.9rem; /* 略微縮小字體 */
+            font-weight: 600;
+            box-shadow: 0 3px 0 #9ca3af; /* 縮小陰影 */
+            user-select: none;
+            transition: all 0.1s ease;
+            cursor: default;
+        }
+
+        .key:active, .key.active {
+            transform: translateY(1px); /* 縮小按下的位移 */
+            box-shadow: 0 2px 0 #9ca3af; /* 縮小按下的陰影 */
+        }
+        
+        .function-key {
+            background-color: var(--color-key-dark);
+            color: #fff;
+            box-shadow: 0 3px 0 #4b5563; /* 縮小陰影 */
+        }
+        
+        /* 新增：正確目標鍵的高亮樣式 (只用於符號鍵) */
+        .highlight-key {
+            background-color: var(--color-timer-blue) !important;
+            color: #fff !important;
+            box-shadow: 0 3px 0 #1d4ed8 !important; /* 深藍陰影 */
+        }
+
+        /* 符號鍵的特別佈局 (配合按鍵縮小調整) */
+        .symbol-key {
+            position: relative;
+        }
+        .symbol-key .top {
+            font-size: 1rem; /* 縮小字體 (從 1.2rem) */
+            position: absolute;
+            top: 3px; /* 調整位置 */
+            left: 3px; /* 調整位置 */
+        }
+        .symbol-key .bottom {
+            font-size: 0.7rem; /* 縮小字體 (從 0.8rem) */
+            position: absolute;
+            bottom: 3px; /* 調整位置 */
+            right: 3px; /* 調整位置 */
+        }
+        /* 確保高亮時，符號鍵上的文字也是白色 */
+        .highlight-key .top, .highlight-key .bottom {
+            color: #fff !important;
+        }
+
+        /* 遊戲狀態回饋 */
+        .correct-key {
+            background-color: var(--color-success) !important;
+            box-shadow: 0 3px 0 #059669 !important; /* 縮小陰影 */
+            color: #fff !important;
+        }
+        .correct-key .top, .correct-key .bottom {
+            color: #fff !important;
+        }
+
+        .error-key {
+            background-color: var(--color-error) !important;
+            box-shadow: 0 3px 0 #b91c1c !important; /* 縮小陰影 */
+            color: #fff !important;
+        }
+        .error-key .top, .error-key .bottom {
+            color: #fff !important;
+        }
+
+        /* 按鈕樣式 (用於開始畫面) */
+        .start-button {
+            padding: 18px 40px;
+            font-size: 1.8rem;
+            font-weight: bold;
+            background-color: var(--color-secondary);
+            color: var(--color-background-dark);
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: transform 0.1s, box-shadow 0.1s;
+            box-shadow: 0 8px 0 #d97706;
+            margin-top: 30px;
+        }
+
+        .start-button:active {
+            transform: translateY(4px);
+            box-shadow: 0 4px 0 #d97706;
+        }
+
+        /* Modal 遊戲結束彈窗 */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: none; 
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background-color: #fff;
+            color: var(--color-background-dark);
+            padding: 40px;
+            border-radius: 15px;
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+        
+        /* *** 最終得分放大 5 倍的樣式 *** */
+        #final-score {
+            font-size: 5rem; /* 約是原本的 5 倍 */
+            font-weight: 900;
+            color: var(--color-error); /* 使用紅色強調分數 */
+            display: block;
+            margin: 10px 0 20px 0;
+            transition: transform 0.3s ease;
+        }
+        /* ------------------------------------- */
+
+        /* ------------------------
+           5. Responsive Adjustments 
+           ------------------------ */
+        @media (max-width: 768px) {
+            .top-row-layout {
+                flex-direction: column; 
+                gap: 20px;
+            }
+            
+            .display-area {
+                width: 100%;
+            }
+
+            .status-panel {
+                width: 100%;
+                flex-direction: row; /* 在手機上讓計時和得分並排 */
+                justify-content: space-around;
+            }
+
+            .status-card {
+                flex: 1;
+                padding: 10px;
+            }
+            
+            #timer, #score {
+                font-size: 1.8rem; 
+            }
+            .status-icon {
+                font-size: 1.2rem;
+            }
+            .status-card .label {
+                font-size: 0.8rem;
+            }
+
+            .display-area, .keyboard {
+                max-width: 100%;
+            }
+            
+            /* 行動版按鍵尺寸維持與桌面版新尺寸一致，以保持緊湊 */
+            .key {
+                height: 40px; 
+                min-width: 35px;
+                font-size: 0.9rem;
+            }
+
+            .key-shift, .key-tab, .key-caps, .key-enter, .key-backspace {
+                min-width: auto;
+                flex-grow: 1;
+            }
+            /* 針對小螢幕隱藏鍵盤第一排最左和最右的兩個鍵，以節省空間 */
+            .key-row:first-child .key:nth-child(1), 
+            .key-row:first-child .key:last-child {
+                display: none;
+            }
+            /* 題目符號字體大小：手機版 5rem */
+            #symbol-display {
+                font-size: 5rem;
+            }
+            #symbol-display.symbol-enlarge {
+                font-size: 7rem; /* 行動版放大後的字體 */
+            }
+            .display-area {
+                min-height: 120px;
+                padding: 10px;
+            }
+            .main-title {
+                font-size: 1.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="game-container">
+        <!-- 移除 "(進階模式)" -->
+        <div class="main-title">鍵盤符號輸入挑戰</div> 
+
+        <!-- Start Screen / 規則畫面 -->
+        <div id="startScreen">
+            
+            <!-- 規則清單 -->
+            <ul class="rule-list">
+                <li>1. 遊戲時間為 180 秒。</li>
+                <li>2. 答對 +100 分，答錯 -10 分 (最低 0 分)。</li>
+                <li>3. 若輸入需要 Shift 鍵，答題後請放開 Shift 鍵，畫面才會進入下一題。</li>
+            </ul>
+            <button class="start-button" onclick="startGame()">開始遊戲</button>
+        </div>
+
+        <!-- Game Screen / 遊戲主畫面 -->
+        <div id="gameScreen" style="position: relative;"> 
+
+            <div class="game-column"> <!-- 整個遊戲區 (題目/狀態/鍵盤) -->
+                
+                <!-- 頂部佈局：題目顯示區 + 狀態欄 -->
+                <div class="top-row-layout">
+                    <!-- 符號顯示區 -->
+                    <div class="display-area">
+                        <div id="symbol-display">?</div>
+                    </div>
+                    
+                    <!-- 狀態欄 (計時/得分) -->
+                    <div class="status-panel">
+                        <!-- 計時卡片 -->
+                        <div id="timer-card" class="status-card">
+                            <i id="timer-icon" class="fas fa-clock status-icon"></i>
+                            <span class="label">計時 (秒)</span>
+                            <span id="timer">180</span>
+                        </div>
+
+                        <!-- 得分卡片 -->
+                        <div id="score-card" class="status-card">
+                            <i id="score-icon" class="fas fa-trophy status-icon"></i>
+                            <span class="label">得分</span>
+                            <span id="score">0</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 警告訊息 -->
+                <div id="shift-warning" class="warning-message">請放開 Shift 鍵，才能開始下一題！</div>
+
+                <!-- 虛擬鍵盤 -->
+                <div class="keyboard">
+                    <!-- 符號/數字列 -->
+                    <div class="keyboard-row">
+                        <div class="key function-key" data-key="Backquote"><span class="top">~</span><span class="bottom">`</span></div>
+                        <div class="key symbol-key" data-key="Digit1"><span class="top">!</span><span class="bottom">1</span></div>
+                        <div class="key symbol-key" data-key="Digit2"><span class="top">@</span><span class="bottom">2</span></div>
+                        <div class="key symbol-key" data-key="Digit3"><span class="top">#</span><span class="bottom">3</span></div>
+                        <div class="key symbol-key" data-key="Digit4"><span class="top">$</span><span class="bottom">4</span></div>
+                        <div class="key symbol-key" data-key="Digit5"><span class="top">%</span><span class="bottom">5</span></div>
+                        <div class="key symbol-key" data-key="Digit6"><span class="top">^</span><span class="bottom">6</span></div>
+                        <div class="key symbol-key" data-key="Digit7"><span class="top">&amp;</span><span class="bottom">7</span></div>
+                        <div class="key symbol-key" data-key="Digit8"><span class="top">*</span><span class="bottom">8</span></div>
+                        <div class="key symbol-key" data-key="Digit9"><span class="top">(</span><span class="bottom">9</span></div>
+                        <div class="key symbol-key" data-key="Digit0"><span class="top">)</span><span class="bottom">0</span></div>
+                        <div class="key function-key" data-key="Minus"><span class="top">_</span><span class="bottom">-</span></div>
+                        <div class="key function-key" data-key="Equal"><span class="top">+</span><span class="bottom">=</span></div>
+                        <div class="key function-key key-backspace" data-key="Backspace"><i class="fas fa-backspace"></i></div>
+                    </div>
+
+                    <!-- QWERTY 列 -->
+                    <div class="keyboard-row">
+                        <div class="key function-key key-tab" data-key="Tab">Tab</div>
+                        <div class="key" data-key="KeyQ">Q</div>
+                        <div class="key" data-key="KeyW">W</div>
+                        <div class="key" data-key="KeyE">E</div>
+                        <div class="key" data-key="KeyR">R</div>
+                        <div class="key" data-key="KeyT">T</div>
+                        <div class="key" data-key="KeyY">Y</div>
+                        <div class="key" data-key="KeyU">U</div>
+                        <div class="key" data-key="KeyI">I</div>
+                        <div class="key" data-key="KeyO">O</div>
+                        <div class="key" data-key="KeyP">P</div>
+                        <div class="key function-key" data-key="BracketLeft"><span class="top">{</span><span class="bottom">[</span></div>
+                        <div class="key function-key" data-key="BracketRight"><span class="top">}</span><span class="bottom">]</span></div>
+                        <div class="key function-key" data-key="Backslash"><span class="top">|</span><span class="bottom">\</span></div>
+                    </div>
+
+                    <!-- ASDFGH 列 -->
+                    <div class="keyboard-row">
+                        <div class="key function-key key-caps" data-key="CapsLock">Caps</div>
+                        <div class="key" data-key="KeyA">A</div>
+                        <div class="key" data-key="KeyS">S</div>
+                        <div class="key" data-key="KeyD">D</div>
+                        <div class="key" data-key="KeyF">F</div>
+                        <div class="key" data-key="KeyG">G</div>
+                        <div class="key" data-key="KeyH">H</div> 
+                        <div class="key" data-key="KeyJ">J</div>
+                        <div class="key" data-key="KeyK">K</div>
+                        <div class="key" data-key="KeyL">L</div>
+                        <div class="key function-key" data-key="Semicolon"><span class="top">:</span><span class="bottom">;</span></div>
+                        <div class="key function-key" data-key="Quote"><span class="top">"</span><span class="bottom">'</span></div>
+                        <div class="key function-key key-enter" data-key="Enter">Enter</div>
+                    </div>
+
+                    <!-- ZXCVBN 列 -->
+                    <div class="keyboard-row">
+                        <div class="key function-key key-shift" data-key="ShiftLeft">Shift</div>
+                        <div class="key" data-key="KeyZ">Z</div>
+                        <div class="key" data-key="KeyX">X</div>
+                        <div class="key" data-key="KeyC">C</div>
+                        <div class="key" data-key="KeyV">V</div>
+                        <div class="key" data-key="KeyB">B</div>
+                        <div class="key" data-key="KeyN">N</div>
+                        <div class="key" data-key="KeyM">M</div>
+                        <div class="key function-key" data-key="Comma"><span class="top">&lt;</span><span class="bottom">,</span></div>
+                        <div class="key function-key" data-key="Period"><span class="top">&gt;</span><span class="bottom">.</span></div>
+                        <div class="key function-key" data-key="Slash"><span class="top">?</span><span class="bottom">/</span></div>
+                        <div class="key function-key key-shift" data-key="ShiftRight">Shift</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 遊戲結束 Modal -->
+    <div id="gameOverModal" class="modal">
+        <div class="modal-content">
+            <h2>遊戲結束！</h2>
+            <p>你的最終得分是: </p>
+            <!-- #final-score 現在會被樣式放大 -->
+            <span id="final-score">0</span> 
+            <button onclick="closeModal(); initializeGame()">再玩一次</button>
+        </div>
+    </div>
+
+    <!-- 載入 Tone.js 函式庫 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js"></script> 
+
+    <script>
+        // 擴充後的挑戰字符列表，包含所有非字母字符和數字
+        const CHALLENGE_CHARS = [
+            // 數字 (不需 Shift)
+            { symbol: '1', code: 'Digit1', shiftRequired: false },
+            { symbol: '2', code: 'Digit2', shiftRequired: false },
+            { symbol: '3', code: 'Digit3', shiftRequired: false },
+            { symbol: '4', code: 'Digit4', shiftRequired: false },
+            { symbol: '5', code: 'Digit5', shiftRequired: false },
+            { symbol: '6', code: 'Digit6', shiftRequired: false },
+            { symbol: '7', code: 'Digit7', shiftRequired: false },
+            { symbol: '8', code: 'Digit8', shiftRequired: false },
+            { symbol: '9', code: 'Digit9', shiftRequired: false },
+            { symbol: '0', code: 'Digit0', shiftRequired: false },
+            
+            // 基礎符號 (不需 Shift)
+            { symbol: '`', code: 'Backquote', shiftRequired: false },
+            { symbol: '-', code: 'Minus', shiftRequired: false },
+            { symbol: '=', code: 'Equal', shiftRequired: false },
+            { symbol: '[', code: 'BracketLeft', shiftRequired: false },
+            { symbol: ']', code: 'BracketRight', shiftRequired: false },
+            { symbol: '\\', code: 'Backslash', shiftRequired: false },
+            { symbol: ';', code: 'Semicolon', shiftRequired: false },
+            { symbol: '\'', code: 'Quote', shiftRequired: false },
+            { symbol: ',', code: 'Comma', shiftRequired: false },
+            { symbol: '.', code: 'Period', shiftRequired: false },
+            { symbol: '/', code: 'Slash', shiftRequired: false },
+
+            // 進階符號 (需 Shift)
+            { symbol: '!', code: 'Digit1', shiftRequired: true },
+            { symbol: '@', code: 'Digit2', shiftRequired: true },
+            { symbol: '#', code: 'Digit3', shiftRequired: true },
+            { symbol: '$', code: 'Digit4', shiftRequired: true },
+            { symbol: '%', code: 'Digit5', shiftRequired: true },
+            { symbol: '^', code: 'Digit6', shiftRequired: true },
+            { symbol: '&', code: 'Digit7', shiftRequired: true },
+            { symbol: '*', code: 'Digit8', shiftRequired: true },
+            { symbol: '(', code: 'Digit9', shiftRequired: true },
+            { symbol: ')', code: 'Digit0', shiftRequired: true },
+            
+            { symbol: '~', code: 'Backquote', shiftRequired: true },
+            { symbol: '_', code: 'Minus', shiftRequired: true },
+            { symbol: '+', code: 'Equal', shiftRequired: true },
+            { symbol: '{', code: 'BracketLeft', shiftRequired: true },
+            { symbol: '}', code: 'BracketRight', shiftRequired: true },
+            { symbol: '|', code: 'Backslash', shiftRequired: true },
+            { symbol: ':', code: 'Semicolon', shiftRequired: true },
+            { symbol: '"', code: 'Quote', shiftRequired: true },
+            { symbol: '<', code: 'Comma', shiftRequired: true },
+            { symbol: '>', code: 'Period', shiftRequired: true },
+            { symbol: '?', code: 'Slash', shiftRequired: true },
+        ];
+        
+        // 需要放大的微小符號列表 (包含逗號和句點)
+        const SYMBOLS_TO_ENLARGE = [',', '.', '\'', '"', ';', ':', '|', '`', '~', '-']; 
+
+        let score = 0;
+        let timeLeft = 180; 
+        let gameActive = false;
+        let currentSymbol = null;
+        let timerInterval = null;
+        let keydownListener = null;
+        let awaitingShiftRelease = false; 
+        
+        // 用於延遲檢查 Shift 是否被持續按住的計時器 ID
+        let shiftHoldCheckTimeout = null; 
+        // 用於追蹤錯誤高亮延遲任務
+        let errorTimeoutId = null;
+        // 追蹤 Shift 鍵的當前物理狀態
+        let isShiftDown = false;
+
+        // --- 音效設定 ---
+        let correctSynth = null;
+        let errorSynth = null;
+
+        /**
+         * 初始化 Tone.js 合成器，用於播放遊戲音效。
+         */
+        function initializeAudio() {
+            // 正確答案音效 (正弦波, 短促悅耳)
+            correctSynth = new Tone.Synth({
+                oscillator: { type: "sine" },
+                envelope: {
+                    attack: 0.02,
+                    decay: 0.2,
+                    sustain: 0,
+                    release: 0.1,
+                },
+            }).toDestination();
+
+            // 錯誤答案音效 (方形波, 短促刺耳)
+            errorSynth = new Tone.Synth({
+                oscillator: { type: "square" },
+                envelope: {
+                    attack: 0.01,
+                    decay: 0.1,
+                    sustain: 0,
+                    release: 0.1,
+                },
+            }).toDestination();
+        }
+
+        /**
+         * 播放正確音效。
+         */
+        function playCorrectSound() {
+            // C5 音高，持續 0.1 秒
+            correctSynth.triggerAttackRelease("C5", "8n"); 
+        }
+
+        /**
+         * 播放錯誤音效。
+         */
+        function playErrorSound() {
+            // 降低的 C#3 音高，更短促
+            errorSynth.triggerAttackRelease("C#3", "16n"); 
+        }
+
+        // 取得 HTML 元素
+        const scoreDisplay = document.getElementById('score');
+        const timerDisplay = document.getElementById('timer');
+        const symbolDisplay = document.getElementById('symbol-display');
+        const modal = document.getElementById('gameOverModal');
+        const finalScoreDisplay = document.getElementById('final-score');
+        const shiftWarning = document.getElementById('shift-warning');
+        const startScreen = document.getElementById('startScreen');
+        const gameScreen = document.getElementById('gameScreen');
+
+
+        // 顯示警告訊息 (等待 Shift 釋放時使用)
+        function showWarning() {
+            shiftWarning.classList.add('visible');
+            symbolDisplay.style.color = 'var(--color-secondary)'; 
+        }
+
+        // 隱藏警告訊息
+        function hideWarning() {
+            symbolDisplay.style.color = 'var(--color-symbol-deep-blue)';
+            shiftWarning.classList.remove('visible');
+        }
+
+        // 初始化遊戲狀態 (回到開始畫面)
+        function initializeGame() {
+            score = 0;
+            timeLeft = 180; 
+            gameActive = false;
+            awaitingShiftRelease = false;
+            isShiftDown = false; // 重設 Shift 狀態
+            scoreDisplay.textContent = score;
+            timerDisplay.textContent = timeLeft;
+            symbolDisplay.textContent = '?';
+            symbolDisplay.style.color = 'var(--color-symbol-deep-blue)';
+            symbolDisplay.classList.remove('symbol-enlarge'); // 確保清除放大類別
+            
+            // 確保清除任何殘留的錯誤高亮計時器和 Shift 檢查計時器
+            if (errorTimeoutId) {
+                clearTimeout(errorTimeoutId);
+                errorTimeoutId = null;
+            }
+            if (shiftHoldCheckTimeout) {
+                clearTimeout(shiftHoldCheckTimeout);
+                shiftHoldCheckTimeout = null;
+            }
+            
+            resetKeyStyles();
+            hideWarning(); 
+
+            // 移除舊的事件監聽器
+            if (keydownListener) {
+                document.removeEventListener('keydown', keydownListener);
+            }
+            // 移除 keyup 監聽器，會在 startGame 中重新添加
+            document.removeEventListener('keyup', handleKeyup);
+            
+            initializeAudio(); // 初始化音效
+
+            // 顯示開始畫面，隱藏遊戲畫面
+            startScreen.style.display = 'flex';
+            gameScreen.style.display = 'none';
+        }
+
+        // 開始遊戲 (從開始畫面切換到遊戲畫面)
+        function startGame() {
+            if (gameActive) return;
+
+            // 啟動 Tone.js 聲音環境 (必須在用戶互動後調用)
+            Tone.start(); 
+
+            // 隱藏開始畫面，顯示遊戲畫面
+            startScreen.style.display = 'none';
+            gameScreen.style.display = 'flex'; 
+
+            gameActive = true;
+            
+            // 啟動計時器
+            timerInterval = setInterval(updateTimer, 1000);
+
+            // 設定鍵盤事件監聽器
+            keydownListener = handleKeydown.bind(this);
+            document.addEventListener('keydown', keydownListener);
+            document.addEventListener('keyup', handleKeyup); // 新增 keyup 監聽
+            
+            // 生成第一個符號
+            nextSymbol();
+        }
+
+        // 計時器更新
+        function updateTimer() {
+            if (!gameActive) {
+                clearInterval(timerInterval);
+                return;
+            }
+
+            timeLeft--;
+            timerDisplay.textContent = timeLeft;
+
+            if (timeLeft <= 0) {
+                endGame();
+            }
+        }
+
+        // 結束遊戲
+        function endGame() {
+            gameActive = false;
+            clearInterval(timerInterval);
+            document.removeEventListener('keydown', keydownListener);
+            document.removeEventListener('keyup', handleKeyup); // 移除 keyup 監聽
+            
+            // 顯示最終得分
+            finalScoreDisplay.textContent = score;
+            modal.style.display = 'flex';
+        }
+
+        // 關閉 Modal
+        function closeModal() {
+            modal.style.display = 'none';
+        }
+
+        // 生成下一個符號並高亮目標鍵 (不包含 Shift 鍵)
+        function nextSymbol() {
+            // 在生成新符號前，必須先清除舊的錯誤高亮計時器和 Shift 檢查計時器
+            if (errorTimeoutId) {
+                clearTimeout(errorTimeoutId);
+                errorTimeoutId = null;
+            }
+            if (shiftHoldCheckTimeout) {
+                clearTimeout(shiftHoldCheckTimeout);
+                shiftHoldCheckTimeout = null;
+            }
+            
+            // 1. 清除舊的狀態回饋 (包括高亮和放大類別)
+            resetKeyStyles(); 
+            symbolDisplay.classList.remove('symbol-enlarge');
+            symbolDisplay.style.transform = 'scale(1)'; // 確保取消放大效果
+
+            const randomIndex = Math.floor(Math.random() * CHALLENGE_CHARS.length);
+            currentSymbol = CHALLENGE_CHARS[randomIndex];
+            symbolDisplay.textContent = currentSymbol.symbol;
+            symbolDisplay.style.color = 'var(--color-symbol-deep-blue)'; // 恢復正常顏色
+            
+            // --- 判斷是否需要放大 ---
+            // 增加對微小符號的放大處理，以提高辨識度
+            if (SYMBOLS_TO_ENLARGE.includes(currentSymbol.symbol)) {
+                 symbolDisplay.classList.add('symbol-enlarge');
+            }
+
+            // 2. 僅高亮目標按鍵 (符號/數字鍵)，**且永遠不對 Shift 鍵進行高亮提示**
+            const targetKeyElement = document.querySelector(`[data-key="${currentSymbol.code}"]`);
+            if (targetKeyElement) {
+                // 確保我們不會意外高亮到 Shift 鍵
+                if (targetKeyElement.dataset.key !== 'ShiftLeft' && targetKeyElement.dataset.key !== 'ShiftRight') {
+                    targetKeyElement.classList.add('highlight-key');
+                }
+            }
+        }
+        
+        // 處理鍵盤按下的事件
+        function handleKeydown(event) {
+            const code = event.code;
+            const keyElement = document.querySelector(`[data-key="${code}"]`);
+            
+            // 處理 Shift 鍵按下
+            if (code === 'ShiftLeft' || code === 'ShiftRight') {
+                isShiftDown = true;
+                keyElement && keyElement.classList.add('active');
+                
+                // *** 關鍵修正：如果已經答對，且 Shift 正在被按下，就開始檢查延遲顯示警告 ***
+                if (awaitingShiftRelease) {
+                    // 清除任何舊的延遲任務
+                    if (shiftHoldCheckTimeout) clearTimeout(shiftHoldCheckTimeout);
+                    
+                    // 延遲 100ms 檢查 Shift 是否仍然被按住
+                    shiftHoldCheckTimeout = setTimeout(() => {
+                        // 只有在延遲後 isShiftDown 仍然為 true (即持續按住) 時才顯示警告
+                        if (awaitingShiftRelease && isShiftDown) {
+                            showWarning();
+                        }
+                        shiftHoldCheckTimeout = null; 
+                    }, 100);
+                }
+                return; 
+            }
+            
+            // 如果遊戲暫停或正在等待 Shift 釋放，則忽略其他所有鍵的輸入
+            if (!gameActive || awaitingShiftRelease) {
+                return;
+            }
+
+            const keyName = event.key;
+            
+            // 對所有非功能鍵進行視覺回饋
+            keyElement && keyElement.classList.add('active');
+
+            // 1. 檢查正確性
+            const isCorrectKey = code === currentSymbol.code;
+            const isCorrectShiftState = event.shiftKey === currentSymbol.shiftRequired;
+            const isCorrectInput = isCorrectKey && isCorrectShiftState;
+            
+            // 2. 判斷是否為字符鍵
+            const isCharacterKey = keyName.length === 1; 
+
+            if (isCorrectInput) {
+                event.preventDefault(); 
+                
+                // --- 正確輸入 ---
+                // 只有在非重複事件時才計分
+                if (!event.repeat) {
+                    score += 100; 
+                    scoreDisplay.textContent = score;
+                    playCorrectSound(); 
+                }
+                
+                symbolDisplay.style.color = 'var(--color-success)';
+                symbolDisplay.style.transform = 'scale(1.1)';
+                
+                // 清除目標鍵的藍色高亮
+                const targetKeyElement = document.querySelector(`[data-key="${currentSymbol.code}"]`);
+                targetKeyElement?.classList.remove('highlight-key');
+
+                // 顯示正確回饋 (只對按下的目標符號鍵)
+                highlightKey(keyElement, 'correct-key');
+
+                // 如果需要 Shift，則進入等待放開 Shift 狀態
+                if (currentSymbol.shiftRequired) {
+                    awaitingShiftRelease = true;
+                    
+                    // 在答對時立即檢查 Shift 狀態並啟動延遲檢查
+                    if (isShiftDown) {
+                        // 清除任何舊的延遲任務
+                        if (shiftHoldCheckTimeout) clearTimeout(shiftHoldCheckTimeout);
+                        
+                        shiftHoldCheckTimeout = setTimeout(() => {
+                            // 只有在延遲後 isShiftDown 仍然為 true (即持續按住) 時才顯示警告
+                            if (awaitingShiftRelease && isShiftDown) {
+                                showWarning();
+                            }
+                            shiftHoldCheckTimeout = null; 
+                        }, 100); // 100ms 延遲檢查
+                    }
+                    
+                } else {
+                    // 不需要 Shift，直接進入下一題 (非重複按鍵才切換)
+                    if (!event.repeat) {
+                        setTimeout(nextSymbol, 100); 
+                    }
+                }
+                
+            } else if (isCharacterKey) {
+                event.preventDefault(); // 防止瀏覽器處理字符輸入，例如空格滾動
+                
+                // 如果是重複事件 (長按不放)，則不扣分，只處理視覺回饋
+                if (event.repeat) {
+                    return; 
+                }
+                
+                // --- 錯誤輸入 (非長按，第一次按下錯誤鍵) ---
+                score = Math.max(0, score - 10); 
+                scoreDisplay.textContent = score;
+                symbolDisplay.style.color = 'var(--color-error)';
+                
+                // 錯誤時的高亮邏輯
+                const targetKeyElement = document.querySelector(`[data-key="${currentSymbol.code}"]`);
+                targetKeyElement?.classList.remove('highlight-key');
+                
+                // 顯示錯誤回饋 (只對按下的錯誤鍵)
+                highlightKey(keyElement, 'error-key');
+
+                playErrorSound(); 
+                
+                // 延遲恢復高亮的任務
+                if (errorTimeoutId) clearTimeout(errorTimeoutId);
+                errorTimeoutId = setTimeout(() => {
+                    if (gameActive && !awaitingShiftRelease) {
+                         targetKeyElement?.classList.add('highlight-key');
+                         symbolDisplay.style.color = 'var(--color-symbol-deep-blue)';
+                         
+                         if (SYMBOLS_TO_ENLARGE.includes(currentSymbol.symbol)) {
+                             symbolDisplay.style.transform = 'scale(1.1)';
+                         } else {
+                             symbolDisplay.style.transform = 'scale(1)';
+                         }
+                    }
+                    errorTimeoutId = null; 
+                }, 300);
+            }
+        }
+
+        // 處理鍵盤放開的事件
+        function handleKeyup(event) {
+            const code = event.code;
+            const keyElement = document.querySelector(`[data-key="${code}"]`);
+
+            if (keyElement) {
+                keyElement.classList.remove('active');
+            }
+            
+            // 處理 Shift 鍵彈起
+            if (code === 'ShiftLeft' || code === 'ShiftRight') {
+                isShiftDown = false;
+                
+                // 檢查是否在等待 Shift 鍵釋放
+                if (awaitingShiftRelease) {
+                    // 釋放 Shift 鍵時，必須立即取消延遲檢查和警告顯示
+                    if (shiftHoldCheckTimeout) {
+                        clearTimeout(shiftHoldCheckTimeout);
+                        shiftHoldCheckTimeout = null;
+                    }
+                    
+                    // Shift 鍵已釋放
+                    awaitingShiftRelease = false;
+                    hideWarning();
+                    
+                    // 確保清除了所有鍵盤回饋樣式，為下一題準備
+                    resetKeyStyles(); 
+                    
+                    setTimeout(nextSymbol, 100); 
+                }
+            }
+        }
+
+        // 視覺回饋函式：暫時高亮按鍵
+        function highlightKey(keyElement, className) {
+            
+            if (keyElement) {
+                keyElement.classList.add(className);
+                setTimeout(() => {
+                    keyElement.classList.remove(className);
+                }, 300); 
+            }
+        }
+
+        // 清除所有符號鍵的樣式 (包括提示樣式)
+        function resetKeyStyles() {
+             document.querySelectorAll('.key').forEach(key => {
+                // 清除所有狀態和高亮樣式
+                key.classList.remove('correct-key', 'error-key', 'highlight-key'); 
+                // 清除非 Shift 鍵的 active 狀態
+                if (key.dataset.key !== 'ShiftLeft' && key.dataset.key !== 'ShiftRight') {
+                     key.classList.remove('active');
+                }
+             });
+        }
+
+        // 確保頁面載入後初始化
+        window.onload = initializeGame;
+
+    </script>
+</body>
+</html>
